@@ -1,167 +1,178 @@
+#include<stdio.h>
+#include<stdlib.h>
+#define MAX 10
+#define INIFINITY 65535
+#define TRUE 1
+#define FALSE 0
+typedef int Boole;  //布尔类型 存储TRUE FALSE
+Boole visited[MAX];    //访问标志数组
 
-# include <iostream>
-# include <stdlib.h>
-using namespace std;
+//邻接表结点定义
+typedef char VertexType;  //顶点数据类型
+typedef int EdgeType;    //边上的权值类型
 
-struct EdgeType                                     //关于图中边的信息的结构体
-
+typedef struct EdgeNode  //边表结点   存储边表信息
 {
+	int adjvex;		    //邻接点域，存储该顶点对应的下标
+	EdgeType weight;	//权值
+	struct EdgeNode *next;	//链域，指向下一个邻接点
+}EdgeNode;
 
-	int from, to;
-
-	int Weight;
-
-};
-
-struct EdgeGraph                                    //关于整个图中顶点、边的所有信息，需要将前面边的结构体内容导入此结构体
-
+typedef struct VertexNode   //顶点表结点
 {
+	VertexType data;      //顶点域，存储顶点信息
+	EdgeNode *firstedge;	//边表头指针，指向此顶点的第一个邻接点
+}VertexNode,AdjList[MAX];
 
-	int Vertex[100];                            //顶点数组，假设最大顶点数和边数不超过100
 
-	EdgeType Edge[100];                         //边信息的结构体数组
+typedef struct
+{
+	AdjList adjList;
+	int numVertexes,numEdges;   //图中当前顶点数和边数
+}GraphAdjList,*GraphAdj;
 
-	int VertexNum, EdgeNum;                     //顶点数、边数
 
-};
+typedef struct LoopQueue{ //定义循环队列结构体
+	int data[MAX];
+	int front;
+	int rear;   //注意每次队尾标记指向最后一个元素的下一个位置
+}Queue, *LQueue;
 
-void Create(struct EdgeGraph *MyEdgeGraph);         //构造图的函数函数
+void InitQueue(LQueue &Q){  //初始化队列
+	Q->front = Q->rear = 0;
+}
 
-void WayToAchieve(struct EdgeGraph *MyEdgeGraph);   //算法实现函数
+bool QueueisFull(LQueue &Q){ //判断队列是否满了
+	if((Q->rear + 1) % MAX == Q->front){
+		return true;  //已满
+	}
+	else{
+		return false;
+	}
+}
 
-int FindRoot(int Parent[],int v);                   //寻找各连通分量根的函数
+bool QueueisEmpty(LQueue &Q){//判断队列是否为空
+	if(Q->front == Q->rear){
+		return true;
+	}
+	return false;
+}
+
+
+void EnQueue(LQueue &Q, int i){ //入队列
+	if(!QueueisFull(Q)){
+		Q->data[Q->rear] = i;
+		Q->rear = (Q->rear + 1) % MAX;  //队尾指针后移
+	}
+}
+
+void DeQueue(LQueue &Q, int *k){ //出队列
+	if(!QueueisEmpty(Q)){
+		*k = Q->data[Q->front];
+		Q->front = (Q->front + 1) % MAX;
+	}
+}
+
+
+/*邻接表创建*/
+void create(GraphAdj G)
+{
+	int i,j,k;
+	EdgeNode *e;
+	printf("输入顶点数和边数:");
+	scanf("%d%d",&G->numVertexes,&G->numEdges);
+	getchar();  						//注意要清除缓冲
+	for(i=0;i<G->numVertexes;i++)          //建立顶点表
+	{
+		scanf("%c",&G->adjList[i].data);    //输入顶点的符号
+		G->adjList[i].firstedge=NULL; 		//将边表置空
+		getchar();
+	}
+	for(k=0;k<G->numEdges;k++)             //建立边表
+	{
+		printf("输入边(Vi,Vj)上的顶点序号:");
+		scanf("%d%d",&i,&j);
+		/*使用头插法加入边表结点*/
+		e=(EdgeNode *)malloc(sizeof(EdgeNode));   //生成结点
+
+		e->adjvex=j;
+		e->next=G->adjList[i].firstedge;
+		G->adjList[i].firstedge=e;
+
+		e=(EdgeNode *)malloc(sizeof(EdgeNode));   //生成结点
+
+		e->adjvex=i;
+		e->next=G->adjList[j].firstedge;
+		G->adjList[j].firstedge=e;
+	}
+	printf("\n");
+}
+
+
+/*邻接表的深度优先递归*/
+void DFS(GraphAdj G,int i)
+{
+	EdgeNode *p;
+	visited[i]=TRUE;         		//访问过了该顶点，标记为TRUE
+	printf("\t%c",G->adjList[i].data);
+	p=G->adjList[i].firstedge;     //让p指向边表第一个结点
+	while(p)                      //在边表内遍历
+	{
+		if(!visited[p->adjvex])    //对未访问的邻接顶点递归调用
+			DFS(G,p->adjvex);
+		p=p->next;
+	}
+ }
+
+ //邻接表的深度遍历操作
+
+void DFSTraverse(GraphAdj G)
+{
+	int i;
+	for(i=0;i<G->numVertexes;i++)
+		visited[i]=FALSE;       //初始设置为未访问
+	for(i=0;i<G->numVertexes;i++)
+		if(!visited[i])       //对未访问的顶点调用DFS，若是连通图只会执行一次
+			DFS(G,i);
+}
+
+/*广度优先遍历*/
+void BFS(GraphAdj G){
+
+	Queue *Q =(LQueue)malloc(sizeof(Queue));
+	for(int i = 0; i < G->numVertexes; i++){
+		visited[i] = FALSE;
+	}
+	InitQueue(Q);  //初始化队列
+	for(int i = 0; i < G->numVertexes; i++){
+		visited[i] = TRUE;
+		printf("\t%c", G->adjList[i].data);
+		EnQueue(Q, i);
+
+		while(!QueueisEmpty(Q)){
+			DeQueue(Q, &i);  //这里不断的修改i的值！！
+			EdgeNode *e = G->adjList[i].firstedge;  //i顶点的邻接链表的第一个结点
+			while(e){//e存在时，将e的所有邻接点加入队列,也就是遍历i的所有邻接点
+				if(!visited[e->adjvex]){ // adjvex是e所表示的结点下标
+					visited[e->adjvex] = TRUE;
+					printf("\t%c", G->adjList[e->adjvex].data);
+					EnQueue(Q, e->adjvex); //将该结点入队
+				}
+				e = e->next; //遍历i的下一个邻接点
+			}
+		}
+	}
+}
 
 int main()
-
 {
-
-	EdgeGraph MyEdgeGraph;
-
-	Create(&MyEdgeGraph);
-
-	WayToAchieve(&MyEdgeGraph);
-
-	system("pause");
-
+	GraphAdjList G;
+	create(&G);
+	printf("深度优先遍历为：");
+	DFSTraverse(&G);
+	printf("\n");
+	printf("广度优先遍历为：");
+	BFS(&G);
+	printf("\n图遍历完毕");
 	return 0;
-
-}
-
-void Create(struct EdgeGraph *MyEdgeGraph)
-
-{
-
-	int Vertex, Edge;
-
-	cout << "请输入无向图的顶点数：" << endl;
-
-	cin >> Vertex;
-
-	cout << "请输入无向图的边数：" << endl;
-
-	cin >> Edge;
-
-	cout << "请依次输入每个边所依附的两个顶点和边的权值：" << endl;
-
-	EdgeType *MyEdge = new EdgeType[Edge];             //申请用户要求数量的边信息结构体数组
-
-	for (int i = 0; i < Edge; i++) {                   //边结构体数组的初始化
-
-		cin >> MyEdge[i].from >> MyEdge[i].to >> MyEdge[i].Weight;
-
-	}
-
-	for (int i = 0; i < Edge; i++) {                   //依据各边的权值进行重新排序
-
-		for (int j = i + 1; j < Edge; j++) {
-
-			if (MyEdge[i].Weight > MyEdge[j].Weight) {
-
-				EdgeType Temp;
-
-				Temp = MyEdge[i];
-
-				MyEdge[i] = MyEdge[j];
-
-				MyEdge[j] = Temp;
-
-			}
-
-		}
-
-	}
-
-	(*MyEdgeGraph).VertexNum = Vertex;
-
-	(*MyEdgeGraph).EdgeNum = Edge;
-
-	for (int i = 0; i < Edge; i++) {
-
-		(*MyEdgeGraph).Edge[i] = MyEdge[i];                //将边的信息结构体导入图的信息结构体
-
-	}
-
-	for (int i = 0; i < Vertex; i++) {
-
-		(*MyEdgeGraph).Vertex[i] = i;                     //初始化图结构体的顶点数组
-
-	}
-	delete MyEdge;
-
-}
-
-void WayToAchieve(struct EdgeGraph *MyEdgeGraph)
-
-{
-
-	int num = 0, i = 0,v1,v2;
-
-	int *root = new int[(*MyEdgeGraph).VertexNum];        //创建辅助函数并初始化
-
-	for (int i = 0; i < (*MyEdgeGraph).VertexNum; i++) {
-
-		root[i] = -1;
-
-	}
-
-	for (num = 0, i = 0; i < (*MyEdgeGraph).EdgeNum; i++) {      //依次对每个边进行遍历，num记录输出边的个数
-
-		v1 = FindRoot(root,(*MyEdgeGraph).Edge[i].from);    //分别寻找v1,v2所在连通分量的根
-
-		v2 = FindRoot(root, (*MyEdgeGraph).Edge[i].to);
-
-		if (v1 != v2) {                                     //如果所在不同的连通分量就合并
-
-			cout << "("<<(*MyEdgeGraph).Edge[i].from<<","<<(*MyEdgeGraph).Edge[i].to<<")" << endl;
-
-			root[v2] = v1;                                 //合并
-
-			num++;                                         //记录选择边的个数
-
-			if (num == (*MyEdgeGraph).VertexNum - 1) {     //如果选择的边次数等于顶点数-1则证明最小树已经生成，结束函数调用
-
-                delete root;
-				return;
-
-			}
-
-		}
-	}
-
-}
-
-int FindRoot(int Parent[], int v)
-
-{
-
-	int v1 = v;
-
-	while (Parent[v1] > -1) {         //沿着连通分量路径不停循环找根
-
-		v1 = Parent[v1];
-
-	}
-
-	return v1;
-
-}
+ }
