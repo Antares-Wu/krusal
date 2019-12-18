@@ -8,7 +8,7 @@ typedef int Boole;  //布尔类型 存储TRUE FALSE
 Boole visited[MAX];    //访问标志数组
 
 //邻接表结点定义
-typedef char VertexType;  //顶点数据类型
+typedef int VertexType;  //顶点数据类型
 typedef int EdgeType;    //边上的权值类型
 
 typedef struct EdgeNode  //边表结点   存储边表信息
@@ -77,32 +77,33 @@ void DeQueue(LQueue &Q, int *k){ //出队列
 /*邻接表创建*/
 void create(GraphAdj G)
 {
-	int i,j,k;
+	int i,j,k,t;
 	EdgeNode *e;
 	printf("输入顶点数和边数:");
 	scanf("%d%d",&G->numVertexes,&G->numEdges);
-	getchar();  						//注意要清除缓冲
+	//getchar();  						//注意要清除缓冲
 	for(i=0;i<G->numVertexes;i++)          //建立顶点表
 	{
-		scanf("%c",&G->adjList[i].data);    //输入顶点的符号
+		G->adjList[i].data=i;           //输入顶点表，序号从0依次
 		G->adjList[i].firstedge=NULL; 		//将边表置空
-		getchar();
 	}
 	for(k=0;k<G->numEdges;k++)             //建立边表
 	{
 		printf("输入边(Vi,Vj)上的顶点序号:");
-		scanf("%d%d",&i,&j);
+		scanf("%d%d%d",&i,&j,&t);
 		/*使用头插法加入边表结点*/
 		e=(EdgeNode *)malloc(sizeof(EdgeNode));   //生成结点
 
 		e->adjvex=j;
 		e->next=G->adjList[i].firstedge;
+		e->weight=t;
 		G->adjList[i].firstedge=e;
 
 		e=(EdgeNode *)malloc(sizeof(EdgeNode));   //生成结点
 
 		e->adjvex=i;
 		e->next=G->adjList[j].firstedge;
+		e->weight=t;
 		G->adjList[j].firstedge=e;
 	}
 	printf("\n");
